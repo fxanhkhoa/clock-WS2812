@@ -32,6 +32,35 @@
 #define START_HOUR_NUM2_SEG_7 80
 #define STOP_HOUR_NUM2_SEG_7  89
 
+#define START_MINUTE_NUM1_SEG_1 90
+#define STOP_MINUTE_NUM1_SEG_1  99
+#define START_MINUTE_NUM1_SEG_2 100
+#define STOP_MINUTE_NUM1_SEG_2  109
+#define START_MINUTE_NUM1_SEG_3 110
+#define STOP_MINUTE_NUM1_SEG_3  119
+#define START_MINUTE_NUM1_SEG_4 120
+#define STOP_MINUTE_NUM1_SEG_4  129
+#define START_MINUTE_NUM1_SEG_5 130
+#define STOP_MINUTE_NUM1_SEG_5  139
+#define START_MINUTE_NUM1_SEG_6 140
+#define STOP_MINUTE_NUM1_SEG_6  149
+#define START_MINUTE_NUM1_SEG_7 150
+#define STOP_MINUTE_NUM1_SEG_7  159
+
+#define START_MINUTE_NUM2_SEG_1 20
+#define STOP_MINUTE_NUM2_SEG_1  29
+#define START_MINUTE_NUM2_SEG_2 30
+#define STOP_MINUTE_NUM2_SEG_2  39
+#define START_MINUTE_NUM2_SEG_3 40
+#define STOP_MINUTE_NUM2_SEG_3  49
+#define START_MINUTE_NUM2_SEG_4 50
+#define STOP_MINUTE_NUM2_SEG_4  59
+#define START_MINUTE_NUM2_SEG_5 60
+#define STOP_MINUTE_NUM2_SEG_5  69
+#define START_MINUTE_NUM2_SEG_6 70
+#define STOP_MINUTE_NUM2_SEG_6  79
+#define START_MINUTE_NUM2_SEG_7 80
+#define STOP_MINUTE_NUM2_SEG_7  89
 
 IPAddress    apIP(192, 168, 3, 1);
 
@@ -73,6 +102,8 @@ IPAddress subnet(255, 255, 255, 0);
 #define DEFAULT_SPEED 1000
 #define DEFAULT_MODE FX_MODE_CUSTOM
 
+uint32_t current_color = 0xFF5900;
+
 unsigned long auto_last_change = 0;
 unsigned long last_wifi_check_time = 0;
 String modes = "";
@@ -100,7 +131,7 @@ void setup() {
   Serial.println("WS2812FX setup");
   ws2812fx.init();
   ws2812fx.setMode(DEFAULT_MODE);
-  ws2812fx.setColor(DEFAULT_COLOR);
+  ws2812fx.setColor(current_color);
   ws2812fx.setSpeed(DEFAULT_SPEED);
   ws2812fx.setBrightness(DEFAULT_BRIGHTNESS);
   ws2812fx.start();
@@ -129,7 +160,7 @@ void loop() {
 
   server.handleClient();
   ws2812fx.service();
-  segment_off();
+  set_time_ws2812(timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds());
 
   //  if(now - last_wifi_check_time > WIFI_TIMEOUT) {
   //    Serial.print("Checking WiFi... ");
@@ -172,17 +203,62 @@ void loop() {
   }
 }
 
-void segment_off() {
-  ws2812fx.setSegment(1, 20, 29,     FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+void set_time_ws2812(int hour, int minute, int second) {
+  if (hour > 12) {
+    hour -= 12;
+  }
+  if (hour / 10 == 1) {
+    set_1(HOUR_NUM1);
+  }
 }
 
 void set_number(int index_led, int number_to_set){
   if (index_led == HOUR_NUM1){
-    
+    ws2812fx.setSegment(0, 20, 29,     FX_MODE_STATIC, COLORS(BLACK), 5000, false);
   }
 }
 
-void set_1(
+void set_1(int index_led){
+  if (index_led == HOUR_NUM1) {
+    ws2812fx.setSegment(0, START_HOUR_NUM1, STOP_HOUR_NUM1, FX_MODE_STATIC, current_color, 5000, false);
+  } else if (index_led == HOUR_NUM2) {
+    off_all_7seg(HOUR_NUM2);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_4, STOP_HOUR_NUM2_SEG_4, FX_MODE_STATIC, current_color, 5000, false);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_7, STOP_HOUR_NUM2_SEG_7, FX_MODE_STATIC, current_color, 5000, false);
+  } else if (index_led == MINUTE_NUM1) {
+    off_all_7seg(MINUTE_NUM1);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_4, STOP_MINUTE_NUM1_SEG_4, FX_MODE_STATIC, current_color, 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_7, STOP_MINUTE_NUM1_SEG_7, FX_MODE_STATIC, current_color, 5000, false);
+  }
+}
+
+void off_all_7seg(int index_led) {
+  if (index_led == HOUR_NUM2) {
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_1, STOP_HOUR_NUM2_SEG_1, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_2, STOP_HOUR_NUM2_SEG_2, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_3, STOP_HOUR_NUM2_SEG_3, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_4, STOP_HOUR_NUM2_SEG_4, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_5, STOP_HOUR_NUM2_SEG_5, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_6, STOP_HOUR_NUM2_SEG_6, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_7, STOP_HOUR_NUM2_SEG_7, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+  } else if (index_led == MINUTE_NUM1) {
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_1, STOP_MINUTE_NUM1_SEG_1, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_2, STOP_MINUTE_NUM1_SEG_2, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_3, STOP_MINUTE_NUM1_SEG_3, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_4, STOP_MINUTE_NUM1_SEG_4, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_5, STOP_MINUTE_NUM1_SEG_5, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_6, STOP_MINUTE_NUM1_SEG_6, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_7, STOP_MINUTE_NUM1_SEG_7, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+  } else if (index_led == MINUTE_NUM1) {
+    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_1, STOP_MINUTE_NUM2_SEG_1, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_2, STOP_MINUTE_NUM2_SEG_2, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_3, STOP_MINUTE_NUM2_SEG_3, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_4, STOP_MINUTE_NUM2_SEG_4, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_5, STOP_MINUTE_NUM2_SEG_5, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_6, STOP_MINUTE_NUM2_SEG_6, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_7, STOP_MINUTE_NUM2_SEG_7, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+  }
+}
 
 void setup_AP() {
   //set-up the custom IP address
@@ -469,6 +545,7 @@ void srv_handle_set() {
   for (uint8_t i = 0; i < server.args(); i++) {
     if (server.argName(i) == "c") {
       uint32_t tmp = (uint32_t) strtol(server.arg(i).c_str(), NULL, 10);
+      current_color = tmp;
       if (tmp >= 0x000000 && tmp <= 0xFFFFFF) {
         ws2812fx.setColor(tmp);
       }
