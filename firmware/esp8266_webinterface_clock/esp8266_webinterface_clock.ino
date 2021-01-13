@@ -14,57 +14,9 @@
 #define MINUTE_NUM1 2
 #define MINUTE_NUM2 3
 
-#define START_HOUR_NUM1 0
-#define STOP_HOUR_NUM1 19
-
-#define START_HOUR_NUM2_SEG_1 20
-#define STOP_HOUR_NUM2_SEG_1  29
-#define START_HOUR_NUM2_SEG_2 30
-#define STOP_HOUR_NUM2_SEG_2  39
-#define START_HOUR_NUM2_SEG_3 40
-#define STOP_HOUR_NUM2_SEG_3  49
-#define START_HOUR_NUM2_SEG_4 50
-#define STOP_HOUR_NUM2_SEG_4  59
-#define START_HOUR_NUM2_SEG_5 60
-#define STOP_HOUR_NUM2_SEG_5  69
-#define START_HOUR_NUM2_SEG_6 70
-#define STOP_HOUR_NUM2_SEG_6  79
-#define START_HOUR_NUM2_SEG_7 80
-#define STOP_HOUR_NUM2_SEG_7  89
-
-#define START_MINUTE_NUM1_SEG_1 90
-#define STOP_MINUTE_NUM1_SEG_1  99
-#define START_MINUTE_NUM1_SEG_2 100
-#define STOP_MINUTE_NUM1_SEG_2  109
-#define START_MINUTE_NUM1_SEG_3 110
-#define STOP_MINUTE_NUM1_SEG_3  119
-#define START_MINUTE_NUM1_SEG_4 120
-#define STOP_MINUTE_NUM1_SEG_4  129
-#define START_MINUTE_NUM1_SEG_5 130
-#define STOP_MINUTE_NUM1_SEG_5  139
-#define START_MINUTE_NUM1_SEG_6 140
-#define STOP_MINUTE_NUM1_SEG_6  149
-#define START_MINUTE_NUM1_SEG_7 150
-#define STOP_MINUTE_NUM1_SEG_7  159
-
-#define START_MINUTE_NUM2_SEG_1 160
-#define STOP_MINUTE_NUM2_SEG_1  169
-#define START_MINUTE_NUM2_SEG_2 170
-#define STOP_MINUTE_NUM2_SEG_2  179
-#define START_MINUTE_NUM2_SEG_3 180
-#define STOP_MINUTE_NUM2_SEG_3  189
-#define START_MINUTE_NUM2_SEG_4 190
-#define STOP_MINUTE_NUM2_SEG_4  199
-#define START_MINUTE_NUM2_SEG_5 200
-#define STOP_MINUTE_NUM2_SEG_5  219
-#define START_MINUTE_NUM2_SEG_6 220
-#define STOP_MINUTE_NUM2_SEG_6  229
-#define START_MINUTE_NUM2_SEG_7 230
-#define STOP_MINUTE_NUM2_SEG_7  239
-
 IPAddress    apIP(192, 168, 3, 1);
-uint16_t start_arr[4][8];
-uint16_t stop_arr[4][8];
+uint8_t start_arr[4][8];
+uint8_t stop_arr[4][8];
 
 const char *ssid = "HyVongClock";
 const char *password = "hyvong123";
@@ -75,8 +27,8 @@ extern const char main_js[];
 const long utcOffsetInSeconds = 25200;
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
-#define WIFI_SSID "YOURSSID"
-#define WIFI_PASSWORD "YOURPASSWORD"
+#define WIFI_SSID "AnhKhoa"
+#define WIFI_PASSWORD "04260317"
 
 // Define NTP Client to get time
 WiFiUDP ntpUDP;
@@ -105,6 +57,7 @@ IPAddress subnet(255, 255, 255, 0);
 #define DEFAULT_MODE FX_MODE_CUSTOM
 
 uint32_t current_color = 0xFF5900;
+String current_mode = "";
 
 unsigned long auto_last_change = 0;
 unsigned long last_wifi_check_time = 0;
@@ -188,7 +141,8 @@ void setup() {
   ws2812fx.start();
 
   Serial.println("Wifi setup");
-  setup_AP();
+//  setup_AP();
+  wifi_setup();
 
   Serial.println("HTTP server setup");
   server.on("/", handleRoot);      //Which routine to handle at root location
@@ -211,7 +165,7 @@ void loop() {
 
   server.handleClient();
   ws2812fx.service();
-  set_time_ws2812(timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds());
+  
 
   //  if(now - last_wifi_check_time > WIFI_TIMEOUT) {
   //    Serial.print("Checking WiFi... ");
@@ -226,6 +180,9 @@ void loop() {
 
   if (now - current_time > 1000) {
     timeClient.update();
+    if (current_mode.indexOf("Custom") >= 0) {
+      set_time_ws2812(timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds());
+    }
 
     Serial.print(daysOfTheWeek[timeClient.getDay()]);
     Serial.print(", ");
@@ -234,7 +191,7 @@ void loop() {
     Serial.print(timeClient.getMinutes());
     Serial.print(":");
     Serial.println(timeClient.getSeconds());
-
+    Serial.println(current_mode);
     current_time = millis();
   }
 
@@ -255,6 +212,11 @@ void loop() {
 }
 
 void set_time_ws2812(int in_hour, int in_minute, int in_second) {
+//  Serial.println("SET");
+  off_all_7seg(HOUR_NUM1);
+  off_all_7seg(HOUR_NUM2);
+  off_all_7seg(MINUTE_NUM1);
+  off_all_7seg(MINUTE_NUM2);
   if (in_hour > 12) {
     in_hour -= 12;
   }
@@ -263,7 +225,9 @@ void set_time_ws2812(int in_hour, int in_minute, int in_second) {
   } else {
     ws2812fx.setSegment(0, start_arr[0][0], stop_arr[0][0], FX_MODE_STATIC, COLORS(BLACK), 5000, false);
   }
+  Serial.println(in_hour / 10);
   in_hour = in_hour % 10;
+  Serial.println(in_hour);
   switch (in_hour) {
     case 0:
       set_0(HOUR_NUM2);
@@ -300,6 +264,8 @@ void set_time_ws2812(int in_hour, int in_minute, int in_second) {
   }
   int minute1 = in_minute / 10;
   int minute2 = in_minute % 10;
+  Serial.println(minute1);
+  Serial.println(minute2);
   switch (minute1) {
     case 0:
       set_0(MINUTE_NUM1);
@@ -377,130 +343,238 @@ void set_number(int index_led, int number_to_set){
 }
 
 void set_0(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][1]; i <= stop_arr[index_led][1]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][2]; i <= stop_arr[index_led][2]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][3]; i <= stop_arr[index_led][3]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 1, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 2, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_1(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
-//  if (index_led == HOUR_NUM1) {
-//    ws2812fx.setSegment(0, START_HOUR_NUM1, STOP_HOUR_NUM1, FX_MODE_STATIC, current_color, 5000, false);
-//  } else if (index_led == HOUR_NUM2) {
-//    off_all_7seg(HOUR_NUM2);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_4, STOP_HOUR_NUM2_SEG_4, FX_MODE_STATIC, current_color, 5000, false);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_7, STOP_HOUR_NUM2_SEG_7, FX_MODE_STATIC, current_color, 5000, false);
-//  } else if (index_led == MINUTE_NUM1) {
-//    off_all_7seg(MINUTE_NUM1);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_4, STOP_MINUTE_NUM1_SEG_4, FX_MODE_STATIC, current_color, 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_7, STOP_MINUTE_NUM1_SEG_7, FX_MODE_STATIC, current_color, 5000, false);
-//  } else if (index_led == MINUTE_NUM2) {
-//    off_all_7seg(MINUTE_NUM2);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_4, STOP_MINUTE_NUM2_SEG_4, FX_MODE_STATIC, current_color, 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_7, STOP_MINUTE_NUM2_SEG_7, FX_MODE_STATIC, current_color, 5000, false);
-//  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_2(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][2]; i <= stop_arr[index_led][2]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][3]; i <= stop_arr[index_led][3]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][5]; i <= stop_arr[index_led][5]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 2, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_3(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][3]; i <= stop_arr[index_led][3]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][5]; i <= stop_arr[index_led][5]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_4(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][1]; i <= stop_arr[index_led][1]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][5]; i <= stop_arr[index_led][5]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 1, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_5(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][1]; i <= stop_arr[index_led][1]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][3]; i <= stop_arr[index_led][3]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][5]; i <= stop_arr[index_led][5]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 1, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_6(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][2]; i <= stop_arr[index_led][2]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][3]; i <= stop_arr[index_led][3]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][5]; i <= stop_arr[index_led][5]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 2, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_7(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_8(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][1]; i <= stop_arr[index_led][1]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][2]; i <= stop_arr[index_led][2]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][3]; i <= stop_arr[index_led][3]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][5]; i <= stop_arr[index_led][5]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 1, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 2, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_9(int index_led) {
-  ws2812fx.setSegment(0, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-  ws2812fx.setSegment(0, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
+  for (int i = start_arr[index_led][1]; i <= stop_arr[index_led][1]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][3]; i <= stop_arr[index_led][3]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][4]; i <= stop_arr[index_led][4]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][5]; i <= stop_arr[index_led][5]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
+//  ws2812fx.setSegment(index_led * 7 + 1, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
+//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void off_all_7seg(int index_led) {
   for (int i = 0; i < 7; i++) {
-    ws2812fx.setSegment(0, start_arr[index_led][i], stop_arr[index_led][i], FX_MODE_STATIC, COLORS(BLACK), 5000, false);
+    for (int j = start_arr[index_led][i]; j <= stop_arr[index_led][i]; j++){
+      ws2812fx.setPixelColor(j, 0);
+    }
+//    ws2812fx.setSegment(index_led * 7 + i, start_arr[index_led][i], stop_arr[index_led][i], FX_MODE_STATIC, COLORS(BLACK), 5000, false);
   }
-//  ws2812fx.setSegment(0, start_arr[index_led][0], stop_arr[index_led][0], FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//  if (index_led == HOUR_NUM2) {
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_1, STOP_HOUR_NUM2_SEG_1, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_2, STOP_HOUR_NUM2_SEG_2, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_3, STOP_HOUR_NUM2_SEG_3, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_4, STOP_HOUR_NUM2_SEG_4, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_5, STOP_HOUR_NUM2_SEG_5, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_6, STOP_HOUR_NUM2_SEG_6, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_HOUR_NUM2_SEG_7, STOP_HOUR_NUM2_SEG_7, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//  } else if (index_led == MINUTE_NUM1) {
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_1, STOP_MINUTE_NUM1_SEG_1, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_2, STOP_MINUTE_NUM1_SEG_2, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_3, STOP_MINUTE_NUM1_SEG_3, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_4, STOP_MINUTE_NUM1_SEG_4, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_5, STOP_MINUTE_NUM1_SEG_5, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_6, STOP_MINUTE_NUM1_SEG_6, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM1_SEG_7, STOP_MINUTE_NUM1_SEG_7, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//  } else if (index_led == MINUTE_NUM1) {
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_1, STOP_MINUTE_NUM2_SEG_1, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_2, STOP_MINUTE_NUM2_SEG_2, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_3, STOP_MINUTE_NUM2_SEG_3, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_4, STOP_MINUTE_NUM2_SEG_4, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_5, STOP_MINUTE_NUM2_SEG_5, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_6, STOP_MINUTE_NUM2_SEG_6, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//    ws2812fx.setSegment(0, START_MINUTE_NUM2_SEG_7, STOP_MINUTE_NUM2_SEG_7, FX_MODE_STATIC, COLORS(BLACK), 5000, false);
-//  }
 }
 
 void setup_AP() {
@@ -530,9 +604,9 @@ void wifi_setup() {
 
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   WiFi.mode(WIFI_STA);
-#ifdef STATIC_IP
+  #ifdef STATIC_IP
   WiFi.config(ip, gateway, subnet);
-#endif
+  #endif
 
   unsigned long connect_start = millis();
   while (WiFi.status() != WL_CONNECTED) {
@@ -798,6 +872,11 @@ void srv_handle_set() {
       uint8_t tmp = (uint8_t) strtol(server.arg(i).c_str(), NULL, 10);
       ws2812fx.setMode(tmp % ws2812fx.getModeCount());
       Serial.print("mode is "); Serial.println(ws2812fx.getModeName(ws2812fx.getMode()));
+      current_mode = ws2812fx.getModeName(ws2812fx.getMode());
+      if (current_mode.indexOf("Custom") < 0) {
+        ws2812fx.setSegment(0, 0, 229, FX_MODE_STATIC, current_color, 1000, false);
+        ws2812fx.setMode(tmp % ws2812fx.getModeCount());
+      }
     }
 
     if (server.argName(i) == "b") {
