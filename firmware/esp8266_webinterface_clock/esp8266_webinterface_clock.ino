@@ -2,8 +2,8 @@
 #include <ESP8266WebServer.h>
 #include <WS2812FX.h>
 #include <WiFiClient.h>
-#include "NTPClient.h"
-#include "WiFiUdp.h"
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 
 //UTC +5:30=5.5*60*60=19800
 //UTC+1=1*60*60=3600
@@ -32,11 +32,11 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 
 // Define NTP Client to get time
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "pool.ntp.org", utcOffsetInSeconds);
+NTPClient timeClient(ntpUDP, "vn.pool.ntp.org", utcOffsetInSeconds);
 
-#define STATIC_IP                       // uncomment for static IP, set IP below
+//#define STATIC_IP                       // uncomment for static IP, set IP below
 #ifdef STATIC_IP
-IPAddress ip(192, 168, 1, 50);
+IPAddress ip(192, 168, 1, 30);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 #endif
@@ -57,7 +57,7 @@ IPAddress subnet(255, 255, 255, 0);
 #define DEFAULT_MODE FX_MODE_CUSTOM
 
 uint32_t current_color = 0xFF5900;
-String current_mode = "";
+String current_mode = "Custom 1";
 
 unsigned long auto_last_change = 0;
 unsigned long last_wifi_check_time = 0;
@@ -144,6 +144,10 @@ void setup() {
 //  setup_AP();
   wifi_setup();
 
+  timeClient.begin();
+  delay(2000);
+  timeClient.begin();
+
   Serial.println("HTTP server setup");
   server.on("/", handleRoot);      //Which routine to handle at root location
   server.on("/Config", handleConfig);
@@ -153,9 +157,9 @@ void setup() {
   server.on("/set", srv_handle_set);
   server.onNotFound(srv_handle_not_found);
   server.begin();
+  delay(2000);
   Serial.println("HTTP server started.");
 
-  timeClient.begin();
   Serial.println("ready!");
 }
 
@@ -193,6 +197,9 @@ void loop() {
     Serial.println(timeClient.getSeconds());
     Serial.println(current_mode);
     current_time = millis();
+    if (millis() > 86400000) {
+      ESP.restart();
+    }
   }
 
   if (auto_cycle && (now - auto_last_change > 10000)) { // cycle effect mode every 10 seconds
@@ -469,6 +476,9 @@ void set_5(int index_led) {
 }
 
 void set_6(int index_led) {
+  for (int i = start_arr[index_led][1]; i <= stop_arr[index_led][1]; i++) {
+    ws2812fx.setPixelColor(i, current_color);  
+  }
   for (int i = start_arr[index_led][2]; i <= stop_arr[index_led][2]; i++) {
     ws2812fx.setPixelColor(i, current_color);  
   }
@@ -484,15 +494,12 @@ void set_6(int index_led) {
   for (int i = start_arr[index_led][6]; i <= stop_arr[index_led][6]; i++) {
     ws2812fx.setPixelColor(i, current_color);  
   }
-  for (int i = start_arr[index_led][7]; i <= stop_arr[index_led][7]; i++) {
-    ws2812fx.setPixelColor(i, current_color);  
-  }
+//  ws2812fx.setSegment(index_led * 7 + 1, start_arr[index_led][1], stop_arr[index_led][1], FX_MODE_STATIC, current_color, 5000, false);
 //  ws2812fx.setSegment(index_led * 7 + 2, start_arr[index_led][2], stop_arr[index_led][2], FX_MODE_STATIC, current_color, 5000, false);
 //  ws2812fx.setSegment(index_led * 7 + 3, start_arr[index_led][3], stop_arr[index_led][3], FX_MODE_STATIC, current_color, 5000, false);
 //  ws2812fx.setSegment(index_led * 7 + 4, start_arr[index_led][4], stop_arr[index_led][4], FX_MODE_STATIC, current_color, 5000, false);
 //  ws2812fx.setSegment(index_led * 7 + 5, start_arr[index_led][5], stop_arr[index_led][5], FX_MODE_STATIC, current_color, 5000, false);
 //  ws2812fx.setSegment(index_led * 7 + 6, start_arr[index_led][6], stop_arr[index_led][6], FX_MODE_STATIC, current_color, 5000, false);
-//  ws2812fx.setSegment(index_led * 7 + 7, start_arr[index_led][7], stop_arr[index_led][7], FX_MODE_STATIC, current_color, 5000, false);
 }
 
 void set_7(int index_led) {
@@ -569,7 +576,7 @@ void set_9(int index_led) {
 }
 
 void off_all_7seg(int index_led) {
-  for (int i = 0; i < 7; i++) {
+  for (int i = 1; i < 8; i++) {
     for (int j = start_arr[index_led][i]; j <= stop_arr[index_led][i]; j++){
       ws2812fx.setPixelColor(j, 0);
     }
